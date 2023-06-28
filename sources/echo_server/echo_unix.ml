@@ -1,4 +1,4 @@
-module M = Echo.Make(struct
+module M = Echo.Make (struct
   let accept fd = Unix.accept fd
   let recv = Unix.recv
   let send = Unix.send

@@ -1,0 +1,19 @@
+(env
+ (dev
+  (flags
+   (:standard -warn-error +a-33-27-50-70-32-39))))
+
+(library
+ (name echo)
+ (libraries unix)
+ (modules echo))
+
+(executable
+ (name echo_unix)
+ (modules echo_unix)
+ (libraries echo))
+
+(executable
+ (name echo_async)
+ (modules echo_async)
+ (libraries echo))

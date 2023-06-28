@@ -89,8 +89,8 @@ module Aio : Aio = struct
             begin match Hashtbl.find ht x with
             | Blocked (Recv (fd, buf, pos, len, mode), k) ->
                 enqueue (fun () -> continue k (Unix.recv fd buf pos len mode))
-            | Blocked (Accept fd, k) -> failwith "not implemented"
-            | Blocked (Send (fd, buf, pos, len, mode), k) -> failwith "not implemented"
+            | Blocked (Accept fd, k) -> enqueue (fun () -> continue k (Unix.accept fd))
+            | Blocked (Send (fd, buf, pos, len, mode), k) -> enqueue (fun () -> continue k (Unix.send fd buf pos len mode))
             | Blocked _ -> failwith "impossible"
             end;
             Hashtbl.remove ht x
@@ -131,11 +131,20 @@ module Aio : Aio = struct
                       end
                     end
                 ) 
-              | Accept fd -> Some (fun (k: (b,_) continuation) ->
-                      failwith "accept not implemented"
+              | (Accept fd as e)-> Some (fun (k: (b,_) continuation) ->
+                      if ready_to_read fd then
+                        continue k (Unix.accept fd)
+                      else
+                        Hashtbl.add br fd (Blocked (e, k));
+                        schedule ()
                       )
-              | Send (fd,buf,pos,len,mode) -> Some (fun (k: (b,_) continuation) ->
-                      failwith "send not implemented"
+              | (Send (fd,buf,pos,len,mode) as e) -> Some (fun (k: (b,_) continuation) ->
+                      if ready_to_write fd then
+                        continue k (Unix.send fd buf pos len mode)
+                      else begin
+                        Hashtbl.add bw fd (Blocked (e, k));
+                        schedule ()
+                      end
                       )
               | (Recv (fd,buf,pos,len,mode) as e) -> Some (fun (k: (b,_) continuation) ->
                     if ready_to_read fd then
